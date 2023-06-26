@@ -6,15 +6,13 @@
     <title>Home</title>
 </head>
 <body>
-
-    <h1> HOME PAGE</h1>
-    <button type="button"> <a href="{% url 'home' %}">Home</a></button>
-    <button type="button"> <a href="{% url 'register' %}">register</a></button>
-    <button type="button"> <a href="{% url 'login' %}">login</a></button>
-    <button type="button"> <a href="{% url 'logout' %}">logout</a></button>
+    <h1>HOME PAGE</h1>
+    <button type="button"><a href="{% url 'home' %}">Home</a></button>
+    <button type="button"><a href="{% url 'register' %}">Register</a></button>
+    <button type="button"><a href="{% url 'login' %}">Login</a></button>
+    <button type="button"><a href="{% url 'logout' %}">Logout</a></button>
     
-
-    <h1>{{request.user}} </h1>
+    <h1>{{ username }}</h1>
     
 </body>
 </html>

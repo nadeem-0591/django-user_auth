@@ -1,51 +1,44 @@
 from django.shortcuts import render,redirect
-from django.contrib.auth.models import User
-from django.contrib import messages
-
-
+from .models import customer
+from django.http import HttpResponse
 from django.contrib.auth import login,authenticate,logout
 
 
-
-# Create your views here.
 def home(request):
-    return render(request,'index.html')
-
-
+    username = request.session.get('username')
+    return render(request, 'index.html', {'username': username})
 def register(request):
     if request.method == 'POST':
         username = request.POST['username']
         email = request.POST['email']
         password = request.POST['password']
-        if User.objects.filter(username=username).exists():
+        role = request.POST['role']
+        if customer.objects.filter(username=username).exists():
+            return HttpResponse('User already exists')
+        
 
-            messages.error(request, 'Username already exists.')
 
-        else:
-            user = User.objects.create_user(username=username, password=password)
-            # Set user role based on your requirements
-            # user.role = role
-            # user.save()
-            messages.success(request, 'User created successfully.')
+        user = customer.objects.create(username=username, password=password, role = role,email =email)
+        user.save()
+        # login(request, user)
+        # return HttpResponse('Created successfully')
+        print('created suscess')
 
+          
         return redirect('home')
     return render(request,'register.html')
 def login_user(request):
-        
-        if request.method == 'POST':
-            username = request.POST['username']
-            password = request.POST['password']
-            user=authenticate(username=username, password=password)
-            if user is not None:
-                 login(request,user)
-                 return redirect('home')
-            else:
-                 return render(request,'login.html','user succes full')
-            
+    if request.method == 'POST':
+        username = request.POST['username']
+        password = request.POST['password']
+        user = customer.objects.filter(username=username, password=password).first()
+        if user:
+            request.session['username'] = user.username
+            return redirect('home')
+        else:
+            return HttpResponse('Invalid credentials')
+    return render(request, 'login.html')
 
-
-
-        return render(request,'login.html')
 def logout_user(request):
      logout(request)
      return redirect('home')
