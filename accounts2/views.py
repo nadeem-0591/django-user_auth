@@ -1,44 +1,63 @@
-from django.shortcuts import render, redirect
-from .models import emplyee
-from django.http import HttpResponse
-from django.contrib.auth import login, authenticate, logout
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+from .models import Event, Participant, Registration
+from .serializers import EventSerializer, ParticipantSerializer, RegistrationSerializer
+from django.utils import timezone
+
+@api_view(['GET'])
+def list_events(request):
+    events = Event.objects.all()
+    data = []
+    for event in events:
+        event_data = {
+            'id': event.id, 
+            'name': event.name,
+            'description': event.description,
+            'date': event.date,
+            'time': event.time,
+        }
+        data.append(event_data)
+    return Response(data)
 
 
-def home(request):
-    username = request.session.get('username')
-    return render(request, 'index.html', {'username': username})
+@api_view(['GET'])
+def event_detail(request, event_id):
+    try:
+        event = Event.objects.get(id=event_id)
+    except Event.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
+    serializer = EventSerializer(event)
+    return Response(serializer.data)
 
-def register(request):
-    if request.method == 'POST':
-        username = request.POST['username']
-        email = request.POST['email']
-        password = request.POST['password']
-        role = request.POST['role']
-        if emplyee.objects.filter(username=username).exists():
-            return HttpResponse('User already exists')
+@api_view(['POST'])
+def register_event(request):
+    data = request.data
+    event_id = data.get('event_id')
+    participant_data = data.get('participant')
 
-        user = emplyee.objects.create(username=username, paswword=password, email=email, role=role)
-        user.save()
-        print('created successfully')
+    try:
+        event = Event.objects.get(id=event_id)
+    except Event.DoesNotExist:
+        print("Event not found")
+        return Response({"message": "Event not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        return redirect('home')
-    return render(request, 'register.html')
+    participant_serializer = ParticipantSerializer(data=participant_data)
+    if participant_serializer.is_valid():
+        participant = participant_serializer.save()
+        print("Participant created:", participant) 
+    else:
+        print("Participant data is not valid:", participant_serializer.errors)
+        return Response(participant_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    if event.date < timezone.now().date():
+        print("Event date has already passed")
+        return Response({"message": "Event date has already passed"}, status=status.HTTP_400_BAD_REQUEST)
 
-def login_user(request):
-    if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
-        user = emplyee.objects.filter(username=username, paswword=password).first()
-        if user:
-            request.session['username'] = user.username
-            return redirect('home')
-        else:
-            return HttpResponse('Invalid credentials')
-    return render(request, 'login.html')
+    registration = Registration(event=event, participant=participant)
+    registration.save()
 
-
-def logout_user(request):
-    logout(request)
-    return redirect('home')
+    print("Registration successful for event:", event) 
+    print("Participant:", participant)  
+    return Response({"message": "Registration successful"}, status=status.HTTP_201_CREATED)
